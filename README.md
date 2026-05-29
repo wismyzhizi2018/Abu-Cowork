@@ -355,6 +355,7 @@ src-tauri/
 |------|------|
 | [使用指南](docs/User-Guide.md) | 完整的产品功能介绍与使用说明 |
 | [安装指南](docs/Installation-Guide.md) | 各平台安装与常见问题解决 |
+| [开发指南](docs/Development-Guide.md) | 架构概览、开发流程、测试规范、调试技巧 |
 
 ## 贡献
 
