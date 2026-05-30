@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNoticeBadgeStore } from '@/stores/noticeBadgeStore';
 import { useI18n } from '@/i18n';
-import { Plus, Workflow, Wrench, Trash2, Settings, Download, Upload, Pencil, Undo2, HelpCircle, FolderInput, FolderClosed, ChevronRight, Minus, Search, X } from 'lucide-react';
+import { Plus, Workflow, Wrench, Trash2, Settings, Download, Upload, Pencil, Undo2, HelpCircle, FolderInput, FolderClosed, ChevronRight, Minus, Search, X, LogOut } from 'lucide-react';
 import GuideModal from '@/components/common/GuideModal';
 import ProfileEditModal from '@/components/common/ProfileEditModal';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs';
 import ShareExportDialog from '@/components/share/ShareExportDialog';
 import ImportedBadge from './ImportedBadge';
 import { isMacOS } from '@/utils/platform';
+import { useAuthStore } from '@/stores/authStore';
 
 interface StatusIndicatorProps {
   status: ConversationStatus;
@@ -81,6 +82,9 @@ export default function Sidebar() {
   const updateInfo = useSettingsStore((s) => s.updateInfo);
   const clearBadge = useNoticeBadgeStore((s) => s.clear);
   const { t } = useI18n();
+
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const logout = useAuthStore((s) => s.logout);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; convId: string } | null>(null);
@@ -427,23 +431,26 @@ export default function Sidebar() {
       {/* User Section */}
       <div className="px-5 py-4 shrink-0">
         <div className="flex items-center gap-2.5">
-          {/* User avatar + nickname (clickable to edit) */}
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="w-8 h-8 rounded-full overflow-hidden shrink-0 hover:ring-2 hover:ring-[var(--abu-clay-40)] transition-shadow"
-            title={t.sidebar.editProfile}
+          {/* User avatar + nickname */}
+          <div
+            onClick={isLoggedIn ? undefined : () => setProfileOpen(true)}
+            className={
+              'w-8 h-8 rounded-full overflow-hidden shrink-0 transition-shadow ' +
+              (isLoggedIn ? '' : 'hover:ring-2 hover:ring-[var(--abu-clay-40)] cursor-pointer')
+            }
+            title={isLoggedIn ? undefined : t.sidebar.editProfile}
           >
             <img src={userAvatar || abuAvatar} alt="Avatar" className="w-full h-full object-cover" />
-          </button>
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="flex-1 min-w-0 text-left"
-            title={t.sidebar.editProfile}
+          </div>
+          <div
+            onClick={isLoggedIn ? undefined : () => setProfileOpen(true)}
+            className={'flex-1 min-w-0 ' + (isLoggedIn ? '' : 'cursor-pointer')}
+            title={isLoggedIn ? undefined : t.sidebar.editProfile}
           >
             <div className="text-[13px] font-semibold text-[var(--abu-text-primary)] truncate">
               {userNickname || t.sidebar.defaultNickname}
             </div>
-          </button>
+          </div>
           <button
             onClick={handleImport}
             className="btn-ghost p-1.5 text-[var(--abu-text-tertiary)] hover:text-[var(--abu-text-primary)] hover:bg-[var(--abu-bg-hover)] rounded-md"
@@ -465,13 +472,24 @@ export default function Sidebar() {
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
             )}
           </button>
-          <button
-            onClick={() => setGuideOpen(true)}
-            className="btn-ghost p-1.5 text-[var(--abu-text-tertiary)] hover:text-[var(--abu-text-primary)] hover:bg-[var(--abu-bg-hover)] rounded-md"
-            title={t.sidebar.help}
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-          </button>
+          {!isLoggedIn && (
+            <button
+              onClick={() => setGuideOpen(true)}
+              className="btn-ghost p-1.5 text-[var(--abu-text-tertiary)] hover:text-[var(--abu-text-primary)] hover:bg-[var(--abu-bg-hover)] rounded-md"
+              title={t.sidebar.help}
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {isLoggedIn && (
+            <button
+              onClick={() => { logout(); window.location.reload(); }}
+              className="btn-ghost p-1.5 text-[var(--abu-text-tertiary)] hover:text-red-400 hover:bg-[var(--abu-bg-hover)] rounded-md"
+              title="退出登录"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

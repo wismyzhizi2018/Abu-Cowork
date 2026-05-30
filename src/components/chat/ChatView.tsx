@@ -24,6 +24,8 @@ import SourceInfoBar from './SourceInfoBar';
 import ComputerUseStatusBar from './ComputerUseStatusBar';
 import ConvIdBadge from './ConvIdBadge';
 import UsageChip from './UsageChip';
+import AgentAvatar from '@/components/common/AgentAvatar';
+import { DEFAULT_AGENT_AVATAR } from '@/components/common/agentAvatarPresets';
 
 /**
  * Groups messages by loopId for rendering.
@@ -87,7 +89,7 @@ export default function ChatView() {
     ? {
         name: pendingAgent.displayNames?.[locale] ?? pendingAgent.name,
         description: pendingAgent.descriptions?.[locale] ?? pendingAgent.description,
-        avatar: pendingAgent.avatar ?? '🤖',
+        avatar: pendingAgent.avatar ?? DEFAULT_AGENT_AVATAR,
         intro: pendingAgent.intros?.[locale] ?? pendingAgent.intro,
       }
     : null;
@@ -272,9 +274,9 @@ export default function ChatView() {
             <div className="text-center mb-8">
               {pendingAgentDisplay ? (
                 <>
-                  {/* Agent avatar (emoji in tinted circle) */}
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--abu-bg-active)] flex items-center justify-center text-5xl select-none">
-                    {pendingAgentDisplay.avatar}
+                  {/* Agent avatar */}
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--abu-bg-active)] flex items-center justify-center">
+                    <AgentAvatar avatar={pendingAgentDisplay.avatar} size="xl" />
                   </div>
 
                   <h1 className="text-[28px] font-semibold text-[var(--abu-text-primary)] leading-tight mb-2">

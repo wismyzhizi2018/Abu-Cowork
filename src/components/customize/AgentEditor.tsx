@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { ArrowLeft, Save, Play } from 'lucide-react';
+import { useRef, useState, type ChangeEvent } from 'react';
+import { ArrowLeft, ImagePlus, Save, Play } from 'lucide-react';
 import { useI18n, format } from '@/i18n';
 import { serializeAgentMd } from '@/core/agent/registry';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Toggle } from '@/components/ui/toggle';
 import { Select } from '@/components/ui/select';
 import type { SubagentDefinition, SubagentMetadata } from '@/types';
@@ -11,6 +13,11 @@ import { useItemName } from '@/hooks/useItemName';
 import { saveItemToAbuDir } from '@/utils/itemStorage';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import AgentAvatar from '@/components/common/AgentAvatar';
+import AgentAvatarPicker from '@/components/common/AgentAvatarPicker';
+import { DEFAULT_AGENT_AVATAR } from '@/components/common/agentAvatarPresets';
+
+const MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 interface AgentEditorProps {
   agent: SubagentDefinition | null;  // null = creating new agent
@@ -22,11 +29,13 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Name validation via shared hook
   const { name, setName, nameValid, nameChanged } = useItemName(agent?.name ?? null);
   const [description, setDescription] = useState(agent?.description ?? '');
-  const [avatar, setAvatar] = useState(agent?.avatar ?? '');
+  const [avatar, setAvatar] = useState(agent?.avatar ?? DEFAULT_AGENT_AVATAR);
   const [model, setModel] = useState(() => {
     if (!agent?.model || agent.model === 'inherit') return '';
     // If the agent has a specific model, check if it's available in current provider
@@ -106,6 +115,27 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
     navigateToChatWithInput(format(t.toolbox.agentTestPrompt, { name: name.trim() }));
   };
 
+  const handleAvatarUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') || file.size > MAX_AVATAR_UPLOAD_BYTES) {
+      setAvatarError(t.toolbox.agentAvatarUploadInvalid);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setAvatar(reader.result);
+        setAvatarError('');
+      }
+    };
+    reader.onerror = () => setAvatarError(t.toolbox.agentAvatarUploadInvalid);
+    reader.readAsDataURL(file);
+  };
+
   const isValid = nameValid;
 
   return (
@@ -147,32 +177,70 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
             {t.toolbox.agentEditorMetadata}
           </h3>
 
-          {/* Name + Avatar row */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-[var(--abu-text-secondary)] mb-1">{t.toolbox.agentEditorName}</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="my-agent"
-                className={cn(
-                  'w-full px-3 py-1.5 rounded-lg border text-sm text-[var(--abu-text-primary)] bg-[var(--abu-bg-base)] focus:outline-none focus:ring-2 focus:ring-[var(--abu-clay-ring)] focus:border-[var(--abu-clay)] transition-all',
-                  name.trim() && !nameValid ? 'border-red-300' : 'border-[var(--abu-border)]',
-                )}
-              />
-              {name.trim() && !nameValid && (
-                <p className="text-[11px] text-red-500 mt-1">{t.toolbox.nameFormatHint}</p>
+          {/* Name */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--abu-text-secondary)] mb-1">{t.toolbox.agentEditorName}</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="my-agent"
+              className={cn(
+                'w-full px-3 py-1.5 rounded-lg border text-sm text-[var(--abu-text-primary)] bg-[var(--abu-bg-base)] focus:outline-none focus:ring-2 focus:ring-[var(--abu-clay-ring)] focus:border-[var(--abu-clay)] transition-all',
+                name.trim() && !nameValid ? 'border-red-300' : 'border-[var(--abu-border)]',
               )}
+            />
+            {name.trim() && !nameValid && (
+              <p className="text-[11px] text-red-500 mt-1">{t.toolbox.nameFormatHint}</p>
+            )}
+          </div>
+
+          {/* Avatar */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--abu-text-secondary)] mb-1">{t.toolbox.agentAvatar}</label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--abu-bg-active)]">
+                <AgentAvatar avatar={avatar} size="xl" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-[var(--abu-border)] bg-[var(--abu-bg-base)]"
+                  >
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    {t.toolbox.agentAvatarUpload}
+                  </Button>
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--abu-text-tertiary)]">
+                  {t.toolbox.agentAvatarUploadHint}
+                </p>
+                {avatarError && (
+                  <p className="mt-1 text-[11px] text-red-500">{avatarError}</p>
+                )}
+              </div>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
             </div>
-            <div className="w-20">
-              <label className="block text-xs font-medium text-[var(--abu-text-secondary)] mb-1">{t.toolbox.agentAvatar}</label>
-              <input
-                type="text"
+            <div className="mt-3">
+              <div className="mb-1.5 text-[11px] font-medium text-[var(--abu-text-tertiary)]">
+                {t.toolbox.agentAvatarDefaultPresets}
+              </div>
+              <AgentAvatarPicker
                 value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="🤖"
-                className="w-full px-3 py-1.5 rounded-lg border border-[var(--abu-border)] text-sm text-[var(--abu-text-primary)] bg-[var(--abu-bg-base)] focus:outline-none focus:ring-2 focus:ring-[var(--abu-clay-ring)] focus:border-[var(--abu-clay)] transition-all text-center"
+                labels={t.agentAvatarPresetLabels}
+                onChange={(value) => {
+                  setAvatar(value);
+                  setAvatarError('');
+                }}
               />
             </div>
           </div>

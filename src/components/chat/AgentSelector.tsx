@@ -3,6 +3,7 @@ import { AtSign, Check, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import type { SubagentMetadata } from '@/types';
+import AgentAvatar from '@/components/common/AgentAvatar';
 
 interface AgentSelectorProps {
   agents: SubagentMetadata[];
@@ -72,7 +73,7 @@ export default function AgentSelector({
       >
         {selected ? (
           <>
-            <span className="text-sm leading-none">{selected.avatar ?? '@'}</span>
+            <AgentAvatar avatar={selected.avatar} size="xs" />
             <span>{selected.name}</span>
           </>
         ) : (
@@ -117,7 +118,7 @@ export default function AgentSelector({
                         : 'hover:bg-[var(--abu-bg-hover)]',
                     )}
                   >
-                    <span className="text-base leading-none mt-0.5 shrink-0">{a.avatar ?? '🤖'}</span>
+                    <span className="shrink-0 mt-0.5"><AgentAvatar avatar={a.avatar} size="sm" /></span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className={cn(

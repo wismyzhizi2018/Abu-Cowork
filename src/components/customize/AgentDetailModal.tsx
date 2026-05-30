@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { X, Bot, Cpu, Wrench, ShieldOff, Wand2, Database, RotateCcw, Cog, Download, Pencil } from 'lucide-react';
+import { X, Cpu, Wrench, ShieldOff, Wand2, Database, RotateCcw, Cog, Download, Pencil } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
 import type { SubagentDefinition } from '@/types';
 import type { MarketplaceItem } from '@/types/marketplace';
 import { parseAgentFile } from '@/core/agent/registry';
 import { useSettingsStore, resolveAgentModel, getEffectiveModel } from '@/stores/settingsStore';
+import AgentAvatar from '@/components/common/AgentAvatar';
 
 interface AgentDetailModalProps {
   agent: SubagentDefinition | null;
@@ -97,11 +98,7 @@ export default function AgentDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--abu-bg-active)]">
           <div className="flex items-center gap-2">
-            {avatar ? (
-              <span className="text-xl">{avatar}</span>
-            ) : (
-              <Bot className="h-5 w-5 text-blue-500" />
-            )}
+            <AgentAvatar avatar={avatar} size="md" />
             <h2 className="text-base font-semibold text-[var(--abu-text-primary)]">{name}</h2>
           </div>
           <button
