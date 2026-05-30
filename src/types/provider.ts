@@ -6,7 +6,7 @@ import type { ApiFormat, ProviderCapabilities } from './index';
 import type { WebSearchProviderType } from '../core/search/providers';
 
 /** Provider source */
-export type ProviderSource = 'builtin' | 'custom';
+export type ProviderSource = 'builtin' | 'custom' | 'remote';
 
 /** Provider connection status */
 export type ProviderStatus = 'unchecked' | 'checking' | 'verified' | 'failed';

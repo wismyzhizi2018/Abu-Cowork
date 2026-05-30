@@ -65,6 +65,8 @@ import AnnouncementBanner from '@/components/common/AnnouncementBanner';
 import DisclaimerBanner from '@/components/common/DisclaimerBanner';
 import { pushDiagnosticSnapshot } from '@/utils/consoleDiagnostic';
 import { useDiagnosticStore } from '@/stores/diagnosticStore';
+import { useAuthStore } from '@/stores/authStore';
+import LoginPage from '@/components/auth/LoginPage';
 
 /**
  * Drain Notice inbox if we're in a state that can actually deliver.
@@ -111,6 +113,22 @@ function App() {
   const hasRunningAgent = useChatStore((s) =>
     Object.values(s.conversations).some((c) => c.status === 'running')
   );
+
+  // Auth bootstrap — must resolve before main init runs
+  const [authResolved, setAuthResolved] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    useAuthStore.getState().bootstrapAuth().then(({ needLogin }) => {
+      if (cancelled) return;
+      if (needLogin) {
+        setShowLogin(true);
+      }
+      setAuthResolved(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleQuit = useCallback(() => {
     setShowCloseDialog(false);
@@ -189,6 +207,9 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Don't run init until auth bootstrap is complete and login is resolved
+    if (!authResolved || showLogin) return;
+
     registerBuiltinTools();
     installLargeWriteGuard();
     refreshDiscovery();
@@ -265,11 +286,12 @@ function App() {
       stopAllWatchers();
       import('@/stores/skillDraftsStore').then(({ stopDraftsSweeper }) => stopDraftsSweeper()).catch(() => {});
     };
-  }, [refreshDiscovery]);
+  }, [refreshDiscovery, authResolved, showLogin]);
 
   // Start scheduler engine and trigger engine
   // Plugins must load BEFORE triggerEngine so the HTTP server knows to bind 0.0.0.0
   useEffect(() => {
+    if (!authResolved || showLogin) return;
     const init = async () => {
       // Load IM plugins first — determines whether trigger server binds LAN or localhost
       await loadIMPlugins().catch((err) => console.warn('[App] IM plugin loading failed:', err));
@@ -323,7 +345,7 @@ function App() {
       stopAllHeartbeats();
       import('@/core/session/conversationStorage').then(m => m.shutdownConversationStorage()).catch(() => {});
     };
-  }, []);
+  }, [authResolved, showLogin]);
 
   // Behavior sensor — controlled by setting
   const behaviorSensorEnabled = useSettingsStore((s) => s.behaviorSensorEnabled);
@@ -430,6 +452,8 @@ function App() {
   return (
     <ErrorBoundary>
     <TooltipProvider delayDuration={200}>
+      {showLogin && <LoginPage onLoginSuccess={() => setShowLogin(false)} />}
+
       {/* Title bar drag region — only needed on macOS where we use overlay title bar */}
       {mac && (
         <div
