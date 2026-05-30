@@ -131,7 +131,9 @@ jobs:
             # The .exe is both the installer and the updater bundle.
             gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe --clobber
             if ls "$BUNDLE"/nsis/*-setup.exe.sig 1>/dev/null 2>&1; then
-              gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe.sig --clobber
+              # Rename .sig to stable name for latest.json generation
+              cp "$BUNDLE"/nsis/*-setup.exe.sig "$BUNDLE"/nsis/Abu_x64-setup.exe.sig
+              gh release upload "$TAG" "$BUNDLE"/nsis/Abu_x64-setup.exe.sig --clobber
             else
               echo "No updater signature found (createUpdaterArtifacts=false), skipping .sig upload"
             fi
@@ -146,19 +148,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          TAG="${{ github.ref_name }}"
-          REPO="${{ github.repository }}"
+          export TAG="${{ github.ref_name }}"
+          export REPO="${{ github.repository }}"
 
           # Download .sig files from release assets
           mkdir -p /tmp/sigs
           gh release download "$TAG" --repo "$REPO" --pattern "*.sig" --dir /tmp/sigs --clobber || true
 
           # Read signatures
-          SIG_AARCH64=$(cat /tmp/sigs/Abu_aarch64.app.tar.gz.sig 2>/dev/null || echo "")
-          SIG_X64=$(cat /tmp/sigs/Abu_x64.app.tar.gz.sig 2>/dev/null || echo "")
-          SIG_WINDOWS=$(cat /tmp/sigs/Abu_x64-setup.exe.sig 2>/dev/null || echo "")
+          export SIG_AARCH64=$(cat /tmp/sigs/Abu_aarch64.app.tar.gz.sig 2>/dev/null || echo "")
+          export SIG_X64=$(cat /tmp/sigs/Abu_x64.app.tar.gz.sig 2>/dev/null || echo "")
+          export SIG_WINDOWS=$(cat /tmp/sigs/Abu_x64-setup.exe.sig 2>/dev/null || echo "")
 
-          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+          export BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
           # Generate latest.json
           python3 <<'PYEOF'
