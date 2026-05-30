@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyError, LLMError } from './adapter';
+import { classifyError, LLMError, extractApiErrorMessage } from './adapter';
 
 describe('adapter', () => {
   // ── LLMError class ──
@@ -128,6 +128,38 @@ describe('adapter', () => {
     it('returns undefined when no retry-after', () => {
       const err = classifyError(429, 'Rate limit exceeded');
       expect(err.retryAfterMs).toBeUndefined();
+    });
+  });
+
+  // ── extractApiErrorMessage ──
+  describe('extractApiErrorMessage', () => {
+    it('extracts message from OpenAI error format', () => {
+      const body = JSON.stringify({ error: { message: 'Invalid API key', type: 'invalid_request_error' } });
+      expect(extractApiErrorMessage(body)).toBe('Invalid API key');
+    });
+
+    it('extracts message from top-level message field', () => {
+      const body = JSON.stringify({ message: 'Rate limited' });
+      expect(extractApiErrorMessage(body)).toBe('Rate limited');
+    });
+
+    it('returns raw body when not JSON', () => {
+      expect(extractApiErrorMessage('Internal Server Error')).toBe('Internal Server Error');
+    });
+
+    it('strips status code prefix before parsing', () => {
+      const body = '403 ' + JSON.stringify({ error: { message: 'Forbidden' } });
+      expect(extractApiErrorMessage(body)).toBe('Forbidden');
+    });
+
+    it('falls back to stripped body when no message field', () => {
+      const body = JSON.stringify({ code: 123 });
+      expect(extractApiErrorMessage(body)).toBe(body);
+    });
+
+    it('prefers error.message over top-level message', () => {
+      const body = JSON.stringify({ error: { message: 'inner' }, message: 'outer' });
+      expect(extractApiErrorMessage(body)).toBe('inner');
     });
   });
 });

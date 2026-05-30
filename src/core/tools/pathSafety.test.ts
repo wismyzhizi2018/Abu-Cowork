@@ -6,6 +6,8 @@ import {
   authorizeWorkspace,
   revokeWorkspace,
   getPermissionDirectory,
+  getAuthorizedWritablePaths,
+  getAuthorizedDirs,
 } from './pathSafety';
 import { setPlatformForTest } from '../../test/helpers';
 
@@ -322,6 +324,66 @@ describe('pathSafety', () => {
       const result = await checkReadPath('//?/C:/tmp/file.txt');
       // Should not get UNC error — it should be treated as C:/tmp/file.txt
       expect(result.reason ?? '').not.toContain('UNC');
+    });
+  });
+
+  // ── getAuthorizedWritablePaths / getAuthorizedDirs ──
+  describe('getAuthorizedWritablePaths', () => {
+    it('returns writable paths only', () => {
+      authorizeWorkspace('/tmp/ws1', ['read', 'write']);
+      authorizeWorkspace('/tmp/ws2', ['read']);
+      const writable = getAuthorizedWritablePaths();
+      expect(writable).toContain('/tmp/ws1');
+      expect(writable).not.toContain('/tmp/ws2');
+      revokeWorkspace('/tmp/ws1');
+      revokeWorkspace('/tmp/ws2');
+    });
+
+    it('returns empty when no workspaces authorized', () => {
+      // All revoked in beforeEach
+      expect(getAuthorizedWritablePaths()).toEqual([]);
+    });
+  });
+
+  describe('getAuthorizedDirs', () => {
+    it('returns all authorized workspace paths', () => {
+      authorizeWorkspace('/tmp/dir1', ['read']);
+      authorizeWorkspace('/tmp/dir2', ['write']);
+      const dirs = getAuthorizedDirs();
+      expect(dirs).toContain('/tmp/dir1');
+      expect(dirs).toContain('/tmp/dir2');
+      revokeWorkspace('/tmp/dir1');
+      revokeWorkspace('/tmp/dir2');
+    });
+  });
+
+  describe('authorizeWorkspace capabilities', () => {
+    it('defaults to read+write when no capabilities specified', async () => {
+      authorizeWorkspace('/tmp/defaultcaps');
+      const readResult = await checkReadPath('/tmp/defaultcaps/file.txt');
+      const writeResult = await checkWritePath('/tmp/defaultcaps/file.txt');
+      expect(readResult.allowed).toBe(true);
+      expect(writeResult.allowed).toBe(true);
+      revokeWorkspace('/tmp/defaultcaps');
+    });
+
+    it('read-only workspace denies write', async () => {
+      authorizeWorkspace('/Users/testuser/readonly-ws', ['read']);
+      const readResult = await checkReadPath('/Users/testuser/readonly-ws/file.txt');
+      const writeResult = await checkWritePath('/Users/testuser/readonly-ws/file.txt');
+      expect(readResult.allowed).toBe(true);
+      expect(writeResult.allowed).toBe(false);
+      revokeWorkspace('/Users/testuser/readonly-ws');
+    });
+
+    it('merges capabilities on repeated calls', async () => {
+      authorizeWorkspace('/Users/testuser/merge-ws', ['read']);
+      authorizeWorkspace('/Users/testuser/merge-ws', ['write']);
+      const readResult = await checkReadPath('/Users/testuser/merge-ws/file.txt');
+      const writeResult = await checkWritePath('/Users/testuser/merge-ws/file.txt');
+      expect(readResult.allowed).toBe(true);
+      expect(writeResult.allowed).toBe(true);
+      revokeWorkspace('/Users/testuser/merge-ws');
     });
   });
 });
