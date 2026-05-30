@@ -40,14 +40,14 @@
     },
     "updater": {
       "endpoints": [
-        "https://YOUR_DOMAIN/path/to/latest.json"
+        "https://github.com/wismyzhizi2018/Abu-Cowork/releases/latest/download/latest.json"
       ],
-      "pubkey": "YOUR_UPDATER_PUBLIC_KEY"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJFQjA0NzQwRTdDMjZBODYKUldTR2FzTG5RRWV3TGtpOXlzdXBxbCtyT1NrKzYwK1NYY1FxWERDbTNlRkYzdFpJR2V1bWRZcUYK"
     }
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "targets": ["dmg", "app", "nsis"],
     "resources": [
       "builtin-skills/",

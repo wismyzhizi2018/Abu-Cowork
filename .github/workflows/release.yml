@@ -137,10 +137,74 @@ jobs:
             fi
           fi
 
-  # TODO: 待配置好 OSS 密钥后启用 publish job（上传到阿里云 OSS + 生成 latest.json）
-  # publish:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - 上传安装包到 OSS
-  #     - 生成 latest.json（给 updater 用）
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate latest.json and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+
+          # Download .sig files from release assets
+          mkdir -p /tmp/sigs
+          gh release download "$TAG" --repo "$REPO" --pattern "*.sig" --dir /tmp/sigs --clobber || true
+
+          # Read signatures
+          SIG_AARCH64=$(cat /tmp/sigs/Abu_aarch64.app.tar.gz.sig 2>/dev/null || echo "")
+          SIG_X64=$(cat /tmp/sigs/Abu_x64.app.tar.gz.sig 2>/dev/null || echo "")
+          SIG_WINDOWS=$(cat /tmp/sigs/Abu_x64-setup.exe.sig 2>/dev/null || echo "")
+
+          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
+          # Generate latest.json
+          python3 <<'PYEOF'
+          import json, os, sys
+
+          tag = os.environ['TAG']
+          base = os.environ['BASE_URL']
+
+          sig_aarch64 = os.environ.get('SIG_AARCH64', '').strip()
+          sig_x64 = os.environ.get('SIG_X64', '').strip()
+          sig_win = os.environ.get('SIG_WINDOWS', '').strip()
+
+          if not any([sig_aarch64, sig_x64, sig_win]):
+              print("ERROR: No .sig files found, cannot generate latest.json", file=sys.stderr)
+              sys.exit(1)
+
+          from datetime import datetime, timezone
+          pub_date = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+          platforms = {}
+          if sig_aarch64:
+              platforms['darwin-aarch64'] = {
+                  'signature': sig_aarch64,
+                  'url': f'{base}/Abu_aarch64.app.tar.gz',
+              }
+          if sig_x64:
+              platforms['darwin-x86_64'] = {
+                  'signature': sig_x64,
+                  'url': f'{base}/Abu_x64.app.tar.gz',
+              }
+          if sig_win:
+              platforms['windows-x86_64'] = {
+                  'signature': sig_win,
+                  'url': f'{base}/Abu_x64-setup.exe',
+              }
+
+          latest = {
+              'version': tag.lstrip('v'),
+              'notes': f'See {base} for details.',
+              'pub_date': pub_date,
+              'platforms': platforms,
+          }
+
+          with open('/tmp/latest.json', 'w') as f:
+              json.dump(latest, f, indent=2)
+          print(json.dumps(latest, indent=2))
+          PYEOF
+
+          gh release upload "$TAG" /tmp/latest.json --repo "$REPO" --clobber
