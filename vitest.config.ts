@@ -23,6 +23,7 @@ export default defineConfig({
     // .env.local is absent. Tests mock fetch independently — this value is
     // never actually called.
     'import.meta.env.VITE_CONSOLE_URL': JSON.stringify('https://console-test.local'),
+    'import.meta.env.VITE_AUTH_BASE_URL': JSON.stringify('https://auth-test.local'),
   },
   test: {
     environment: 'happy-dom',
