@@ -99,7 +99,7 @@ Abu 基于 **Tauri 2.0** 构建，采用前后端分离架构：
 
 ### 前置要求
 
-- Node.js >= 18
+- Node.js >= 22
 - Rust >= 1.75
 - Tauri 2.0 系统依赖（[参考文档](https://v2.tauri.app/start/prerequisites/)）
 

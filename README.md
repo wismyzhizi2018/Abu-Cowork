@@ -257,7 +257,7 @@
 
 ### 前置要求
 
-- Node.js >= 18
+- Node.js >= 22
 - Rust >= 1.75（[安装 Rust](https://rustup.rs/)）
 - Tauri 2.0 系统依赖（[参考文档](https://v2.tauri.app/start/prerequisites/)）
 
