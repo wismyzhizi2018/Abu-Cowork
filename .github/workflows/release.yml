@@ -112,17 +112,27 @@ jobs:
             else
               ARCH_SUFFIX="x64"
             fi
-            cp "$BUNDLE"/macos/Abu.app.tar.gz "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz
-            cp "$BUNDLE"/macos/Abu.app.tar.gz.sig "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz.sig
 
             gh release upload "$TAG" "$BUNDLE"/dmg/*.dmg --clobber || true
-            gh release upload "$TAG" "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz --clobber
-            gh release upload "$TAG" "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz.sig --clobber
+
+            # Updater artifacts (.app.tar.gz) are only generated when createUpdaterArtifacts=true
+            if [ -f "$BUNDLE"/macos/Abu.app.tar.gz ]; then
+              cp "$BUNDLE"/macos/Abu.app.tar.gz "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz
+              cp "$BUNDLE"/macos/Abu.app.tar.gz.sig "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz.sig
+              gh release upload "$TAG" "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz --clobber
+              gh release upload "$TAG" "$BUNDLE"/macos/Abu_${ARCH_SUFFIX}.app.tar.gz.sig --clobber
+            else
+              echo "No updater artifacts found (createUpdaterArtifacts=false), skipping .app.tar.gz upload"
+            fi
           else
             # Tauri 2 signs the NSIS .exe installer directly (not a separate .nsis.zip).
             # The .exe is both the installer and the updater bundle.
             gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe --clobber
-            gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe.sig --clobber
+            if ls "$BUNDLE"/nsis/*-setup.exe.sig 1>/dev/null 2>&1; then
+              gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe.sig --clobber
+            else
+              echo "No updater signature found (createUpdaterArtifacts=false), skipping .sig upload"
+            fi
           fi
 
   publish:
@@ -144,13 +154,15 @@ jobs:
           echo "=== All release assets ==="
           gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" --json assets --jq '.assets[].name'
 
+          # Updater artifacts (.tar.gz, .sig) are only present when createUpdaterArtifacts=true
           gh release download "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             -D release-assets \
-            -p "*.tar.gz" -p "*.tar.gz.sig" -p "*-setup.exe" -p "*-setup.exe.sig"
+            -p "*.tar.gz" -p "*.tar.gz.sig" -p "*-setup.exe" -p "*-setup.exe.sig" \
+            || echo "No updater artifacts found, skipping download"
 
           echo "=== Downloaded ==="
-          ls -la release-assets/
+          ls -la release-assets/ || echo "No files downloaded"
 
       - name: Generate latest.json
         shell: bash
@@ -160,6 +172,11 @@ jobs:
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
           OSS_REGION: ${{ secrets.OSS_REGION }}
         run: |
+          # Skip if no updater artifacts were downloaded
+          if [ -z "$(ls release-assets/ 2>/dev/null)" ]; then
+            echo "No updater artifacts found (createUpdaterArtifacts=false), skipping latest.json generation and OSS upload"
+            exit 0
+          fi
           AARCH64_SIG=$(cat release-assets/*aarch64*.tar.gz.sig 2>/dev/null || echo "")
           X86_64_SIG=$(cat release-assets/*x64*.tar.gz.sig 2>/dev/null || echo "")
           WINDOWS_SIG=$(cat release-assets/*-setup.exe.sig 2>/dev/null || echo "")
@@ -215,10 +232,19 @@ jobs:
           PYEOF
 
       - name: Install ossutil
-        run: curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+        run: |
+          if [ -z "$(ls release-assets/ 2>/dev/null)" ]; then
+            echo "No updater artifacts, skipping OSS steps"
+            exit 0
+          fi
+          curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
 
       - name: Configure ossutil
         run: |
+          if [ -z "$(ls release-assets/ 2>/dev/null)" ]; then
+            echo "No updater artifacts, skipping"
+            exit 0
+          fi
           ossutil config \
             -e ${{ secrets.OSS_REGION }}.aliyuncs.com \
             -i ${{ secrets.ALIYUN_ACCESS_KEY_ID }} \
@@ -226,6 +252,10 @@ jobs:
 
       - name: Upload to OSS
         run: |
+          if [ -z "$(ls release-assets/ 2>/dev/null)" ]; then
+            echo "No updater artifacts, skipping OSS upload"
+            exit 0
+          fi
           VERSION="${{ github.ref_name }}"
           BUCKET="oss://${{ secrets.OSS_BUCKET }}"
 
