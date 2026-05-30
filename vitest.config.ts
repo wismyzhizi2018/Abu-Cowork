@@ -24,6 +24,8 @@ export default defineConfig({
     // never actually called.
     'import.meta.env.VITE_CONSOLE_URL': JSON.stringify('https://console-test.local'),
     'import.meta.env.VITE_AUTH_BASE_URL': JSON.stringify('https://auth-test.local'),
+    'import.meta.env.VITE_ORDER_API_URL': JSON.stringify('https://order-test.local'),
+    'import.meta.env.VITE_PROVIDERS_URL': JSON.stringify('https://providers-test.local'),
   },
   test: {
     environment: 'happy-dom',
