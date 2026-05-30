@@ -7,6 +7,35 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('URL construction', () => {
+  it('appends path correctly to plain domain', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 0, data: { token: 't', name: 'n', id: 'i' } }), { status: 200 }),
+    );
+    await loginERP('https://erp.example.com', '138', 'pass');
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(url).toMatch(/^https:\/\/erp\.example\.com\/rest\/auth\/user\/login\?/);
+  });
+
+  it('preserves base path when baseUrl has sub-path', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 0, data: { providers: [] } }), { status: 200 }),
+    );
+    await fetchProviders('https://www.example.com/model-center', 'tk');
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(url).toBe('https://www.example.com/model-center/api/providers');
+  });
+
+  it('handles baseUrl with trailing slash', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 0, data: { providers: [] } }), { status: 200 }),
+    );
+    await fetchProviders('https://www.example.com/model-center/', 'tk');
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(url).toBe('https://www.example.com/model-center/api/providers');
+  });
+});
+
 describe('loginERP', () => {
   it('returns token/name/id on success', async () => {
     const mockData = { code: 0, data: { token: 'tk-123', name: '张三', id: 'u1' } };

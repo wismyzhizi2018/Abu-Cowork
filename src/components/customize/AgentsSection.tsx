@@ -7,26 +7,20 @@ import { agentRegistry } from '@/core/agent/registry';
 import AgentEditor from './AgentEditor';
 import { Toggle } from '@/components/ui/toggle';
 import { ChevronDown, ChevronRight, MoreHorizontal, Pencil, Trash2, MessageCircle, Eye, Code, Search, Plus, X, Wand2, PenLine, Upload, Check } from 'lucide-react';
-import { remove } from '@tauri-apps/plugin-fs';
-import { getParentDir } from '@/utils/pathUtils';
+import { rename, mkdir, exists } from '@tauri-apps/plugin-fs';
+import { homeDir } from '@tauri-apps/api/path';
+import { getParentDir, joinPath } from '@/utils/pathUtils';
 import type { SubagentDefinition } from '@/types';
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import abuAvatar from '@/assets/abu-avatar.png';
+import AgentAvatar from '@/components/common/AgentAvatar';
 
 function isSystemAgent(agent: SubagentDefinition): boolean {
   // System / builtin agents ship with the app (registered in registry.ts) —
   // they live under "Examples" and can't be edited or deleted. Everything
   // discovered from user / project directories is a user agent.
   return agent.filePath === '__builtin__';
-}
-
-/** Render agent avatar: use real image for abu, emoji for others */
-function AgentAvatar({ agent, size = 'md' }: { agent: SubagentDefinition; size?: 'sm' | 'md' }) {
-  const cls = size === 'sm' ? 'h-5 w-5' : 'h-6 w-6';
-  if (agent.name === 'abu') {
-    return <img src={abuAvatar} alt="Abu" className={`${cls} rounded-full object-cover`} />;
-  }
-  return <span className={size === 'sm' ? 'text-base' : 'text-xl'}>{agent.avatar || '🤖'}</span>;
 }
 
 /** Display name: locale-aware. Falls back to canonical `name` if no override. */
@@ -71,6 +65,7 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [editorAgent, setEditorAgent] = useState<SubagentDefinition | 'new' | null>(null);
   const [menuAgent, setMenuAgent] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SubagentDefinition | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [showSearch, setShowSearch] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -138,12 +133,19 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
 
   const selected = installedAgents.find((a) => a.name === selectedAgent) ?? null;
 
-  // Delete a user-installed agent
+  // Delete a user-installed agent (move to trash first)
   const handleDelete = async (agent: SubagentDefinition) => {
     if (agent.filePath === '__builtin__' || agent.filePath.includes('builtin-agents')) return;
     try {
       const agentDir = getParentDir(agent.filePath);
-      await remove(agentDir, { recursive: true });
+      const home = await homeDir();
+      const trashDir = joinPath(home, '.abu/agents/.trash');
+      if (!(await exists(trashDir))) {
+        await mkdir(trashDir, { recursive: true });
+      }
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const backupPath = joinPath(trashDir, `${agent.name}_${ts}`);
+      await rename(agentDir, backupPath);
       // Select adjacent item so the user stays in context after deletion
       if (selectedAgent === agent.name) {
         const names = filteredAgents.map((a) => a.name);
@@ -177,7 +179,7 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
           }`}
           onClick={() => setSelectedAgent(agent.name)}
         >
-          <AgentAvatar agent={agent} size="sm" />
+          <AgentAvatar avatar={agent.avatar} size="sm" imgSrc={agent.name === 'abu' ? abuAvatar : undefined} />
           <div className="flex-1 min-w-0">
             <div className={`text-sm truncate ${
               !isEnabled && agent.name !== 'abu' ? 'text-[var(--abu-text-placeholder)]' : isSelected ? 'text-[var(--abu-text-primary)] font-medium' : 'text-[var(--abu-text-tertiary)]'
@@ -353,7 +355,7 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
             {/* Row 1: Name + Toggle + Menu */}
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="shrink-0"><AgentAvatar agent={selected} /></span>
+                <span className="shrink-0"><AgentAvatar avatar={selected.avatar} imgSrc={selected.name === 'abu' ? abuAvatar : undefined} /></span>
                 <h2 className="text-xl font-semibold text-[var(--abu-text-primary)] truncate" title={displayName(selected, locale)}>{displayName(selected, locale)}</h2>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -398,7 +400,7 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
                             </button>
                             <button
                               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                              onClick={() => { handleDelete(selected); setMenuAgent(null); }}
+                              onClick={() => { setDeleteTarget(selected); setMenuAgent(null); }}
                             >
                               <Trash2 className="h-3 w-3" />
                               {t.toolbox.uninstall}
@@ -513,6 +515,20 @@ export default function AgentsSection({ manualCreateTrigger, onAICreate, onManua
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={t.toolbox.uninstallConfirmTitle}
+        message={t.toolbox.uninstallConfirmMessage}
+        confirmText={t.toolbox.uninstall}
+        cancelText={t.common.cancel}
+        variant="danger"
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

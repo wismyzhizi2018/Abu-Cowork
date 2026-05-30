@@ -6,6 +6,7 @@ import { useSettingsStore } from './settingsStore';
 vi.mock('@/core/auth/loginApi', () => ({
   loginERP: vi.fn(),
   fetchProviders: vi.fn(),
+  fetchUserInfo: vi.fn(),
 }));
 
 // Mock secretStore — must include all exports used by settingsStore too
@@ -24,11 +25,12 @@ vi.mock('@/utils/secretStore', () => ({
   writeSecretOrDelete: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { loginERP, fetchProviders } from '@/core/auth/loginApi';
+import { loginERP, fetchProviders, fetchUserInfo } from '@/core/auth/loginApi';
 import { getSecret, setSecret, deleteSecret } from '@/utils/secretStore';
 
 const mockLoginERP = vi.mocked(loginERP);
 const mockFetchProviders = vi.mocked(fetchProviders);
+const mockFetchUserInfo = vi.mocked(fetchUserInfo);
 const mockGetSecret = vi.mocked(getSecret);
 const mockSetSecret = vi.mocked(setSecret);
 const mockDeleteSecret = vi.mocked(deleteSecret);
@@ -199,6 +201,7 @@ describe('authStore.bootstrapAuth', () => {
   it('returns needLogin=false and sets isLoggedIn when cached token works', async () => {
     useAuthStore.setState({ skipLogin: false, isLoggedIn: false });
     mockGetSecret.mockResolvedValueOnce('cached-token');
+    mockFetchUserInfo.mockResolvedValueOnce({ name: '张三', avatar: 'https://example.com/a.png' });
     mockFetchProviders.mockResolvedValueOnce(SAMPLE_PROVIDERS);
 
     const result = await useAuthStore.getState().bootstrapAuth();
@@ -207,16 +210,28 @@ describe('authStore.bootstrapAuth', () => {
     expect(useAuthStore.getState().isLoggedIn).toBe(true);
   });
 
-  it('clears token and returns needLogin=true when fetchProviders fails', async () => {
+  it('clears token and returns needLogin=true when fetchUserInfo fails', async () => {
     useAuthStore.setState({ skipLogin: false });
     mockGetSecret.mockResolvedValueOnce('expired-token');
-    mockFetchProviders.mockRejectedValueOnce(new Error('HTTP 401'));
+    mockFetchUserInfo.mockRejectedValueOnce(new Error('HTTP 401'));
     mockDeleteSecret.mockResolvedValueOnce(undefined);
 
     const result = await useAuthStore.getState().bootstrapAuth();
 
     expect(result).toEqual({ needLogin: true });
     expect(mockDeleteSecret).toHaveBeenCalledWith('auth:erpToken');
+  });
+
+  it('still returns needLogin=false when fetchProviders fails but token is valid', async () => {
+    useAuthStore.setState({ skipLogin: false, isLoggedIn: false });
+    mockGetSecret.mockResolvedValueOnce('cached-token');
+    mockFetchUserInfo.mockResolvedValueOnce({ name: '张三', avatar: '' });
+    mockFetchProviders.mockRejectedValueOnce(new Error('not implemented'));
+
+    const result = await useAuthStore.getState().bootstrapAuth();
+
+    expect(result).toEqual({ needLogin: false });
+    expect(useAuthStore.getState().isLoggedIn).toBe(true);
   });
 
   it('returns needLogin=true when getSecret throws', async () => {
@@ -233,5 +248,109 @@ describe('authStore.clearError', () => {
     useAuthStore.setState({ loginError: 'some error' });
     useAuthStore.getState().clearError();
     expect(useAuthStore.getState().loginError).toBeNull();
+  });
+});
+
+describe('authStore.disableLocalProviders', () => {
+  const LOCAL_PROVIDER_CONFIG = {
+    source: 'user' as const,
+    name: 'local-llm',
+    enabled: true,
+    apiFormat: 'openai-compatible' as const,
+    baseUrl: 'http://localhost:11434',
+    apiKey: '',
+    models: [{ id: 'llama3', label: 'Llama 3' }],
+    userAdded: true,
+  };
+
+  beforeEach(() => {
+    // Ensure a local provider exists and is enabled
+    const settings = useSettingsStore.getState();
+    const existing = settings.providers.find((p) => p.name === 'local-llm' && p.source !== 'remote');
+    if (!existing) {
+      settings.addProvider(LOCAL_PROVIDER_CONFIG);
+    } else {
+      settings.updateProvider(existing.id, { enabled: true });
+    }
+  });
+
+  it('disables local providers when remote returns non-empty list', async () => {
+    mockLoginERP.mockResolvedValueOnce({ token: 'tk-1', name: '张三', id: 'u1' });
+    mockSetSecret.mockResolvedValueOnce(undefined);
+    mockFetchProviders.mockResolvedValueOnce(SAMPLE_PROVIDERS);
+
+    await useAuthStore.getState().login('138', 'pass');
+
+    const localP = useSettingsStore.getState().providers.find((p) => p.name === 'local-llm' && p.source !== 'remote');
+    expect(localP?.enabled).toBe(false);
+  });
+
+  it('keeps local providers enabled when remote returns empty list', async () => {
+    mockLoginERP.mockResolvedValueOnce({ token: 'tk-1', name: '张三', id: 'u1' });
+    mockSetSecret.mockResolvedValueOnce(undefined);
+    mockFetchProviders.mockResolvedValueOnce([]);
+
+    await useAuthStore.getState().login('138', 'pass');
+
+    const localP = useSettingsStore.getState().providers.find((p) => p.name === 'local-llm' && p.source !== 'remote');
+    expect(localP?.enabled).toBe(true);
+  });
+
+  it('keeps local providers enabled when fetchProviders fails', async () => {
+    mockLoginERP.mockResolvedValueOnce({ token: 'tk-1', name: '张三', id: 'u1' });
+    mockSetSecret.mockResolvedValueOnce(undefined);
+    mockFetchProviders.mockRejectedValueOnce(new Error('network error'));
+
+    await useAuthStore.getState().login('138', 'pass');
+
+    const localP = useSettingsStore.getState().providers.find((p) => p.name === 'local-llm' && p.source !== 'remote');
+    expect(localP?.enabled).toBe(true);
+  });
+});
+
+describe('authStore.bootstrapAuth — disableLocalProviders', () => {
+  const LOCAL_PROVIDER_CONFIG = {
+    source: 'user' as const,
+    name: 'local-llm-bs',
+    enabled: true,
+    apiFormat: 'openai-compatible' as const,
+    baseUrl: 'http://localhost:11434',
+    apiKey: '',
+    models: [{ id: 'llama3', label: 'Llama 3' }],
+    userAdded: true,
+  };
+
+  beforeEach(() => {
+    const settings = useSettingsStore.getState();
+    const existing = settings.providers.find((p) => p.name === 'local-llm-bs' && p.source !== 'remote');
+    if (!existing) {
+      settings.addProvider(LOCAL_PROVIDER_CONFIG);
+    } else {
+      settings.updateProvider(existing.id, { enabled: true });
+    }
+  });
+
+  it('disables local providers on bootstrap when remote returns providers', async () => {
+    useAuthStore.setState({ skipLogin: false, isLoggedIn: false });
+    mockGetSecret.mockResolvedValueOnce('cached-token');
+    mockFetchUserInfo.mockResolvedValueOnce({ name: '张三', avatar: '' });
+    mockFetchProviders.mockResolvedValueOnce(SAMPLE_PROVIDERS);
+
+    await useAuthStore.getState().bootstrapAuth();
+
+    const localP = useSettingsStore.getState().providers.find((p) => p.name === 'local-llm-bs' && p.source !== 'remote');
+    expect(localP?.enabled).toBe(false);
+  });
+
+  it('keeps local providers enabled on bootstrap when remote returns empty', async () => {
+    useAuthStore.setState({ skipLogin: false, isLoggedIn: false });
+    mockGetSecret.mockResolvedValueOnce('cached-token');
+    mockFetchUserInfo.mockResolvedValueOnce({ name: '张三', avatar: '' });
+    mockFetchProviders.mockResolvedValueOnce([]);
+
+    await useAuthStore.getState().bootstrapAuth();
+
+    const localP = useSettingsStore.getState().providers.find((p) => p.name === 'local-llm-bs' && p.source !== 'remote');
+    expect(localP?.enabled).toBe(true);
   });
 });

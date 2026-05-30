@@ -685,10 +685,6 @@ const enUS: TranslationDict = {
     exportIncludeRawWarning: '⚠ Bundle will include your raw conversation text. Enable only if you trust the recipient.',
     exportIncludedListTitle: 'Bundle contents:',
     exportPrivacyText: 'API keys, secrets, and other conversations are never included. See README.txt inside.',
-    uploadButton: 'Send to developer',
-    uploadInProgress: 'Uploading…',
-    uploadSuccess: 'Uploaded',
-    uploadFailed: 'Upload failed',
     successTitle: 'Bundle exported',
     successMeta: '{size} · {count} files · {scrubbed} text fields scrubbed',
     successOpenFinder: 'Show in Finder',
@@ -714,7 +710,7 @@ const enUS: TranslationDict = {
     createSkill: 'Create Skill',
     createWithAbu: 'Create with Abu',
     createManually: 'Create Manually',
-    nameFormatHint: 'Only lowercase letters, numbers, and hyphens allowed. Cannot start or end with a hyphen.',
+    nameFormatHint: 'Cannot start or end with a hyphen. No spaces allowed.',
     aiAssistedCreate: 'AI-assisted custom skill creation',
     installFailed: 'Install failed',
     // npm registry install
@@ -772,6 +768,8 @@ const enUS: TranslationDict = {
     add: 'Add',
     install: 'Install',
     uninstall: 'Uninstall',
+    uninstallConfirmTitle: 'Confirm Uninstall',
+    uninstallConfirmMessage: 'The agent will be moved to trash (~/.abu/agents/.trash/) and can be manually restored. Continue?',
     installed: 'Installed',
     installAndConnect: 'Install & Connect',
     popularMCPServices: 'Popular MCP Services',
@@ -904,6 +902,10 @@ const enUS: TranslationDict = {
     agentMaxTurns: 'Max Turns',
     agentBackground: 'Background',
     agentAvatar: 'Avatar',
+    agentAvatarUpload: 'Upload Avatar',
+    agentAvatarUploadHint: 'JPG, PNG, WebP, or GIF. Max 2 MB.',
+    agentAvatarUploadInvalid: 'Choose an image file up to 2 MB',
+    agentAvatarDefaultPresets: 'Default avatars',
     agentSystemPrompt: 'System Prompt',
     agentEdit: 'Edit',
     agentSave: 'Save',
@@ -1027,6 +1029,14 @@ const enUS: TranslationDict = {
     categoryBlocksUnblock: 'Unblock',
     categoryBlocksUnblockError: 'Unblock failed',
     categoryBlocksHint: 'Skills you marked "don\'t propose this kind". Unblock to let Abu suggest them again.',
+  },
+  agentAvatarPresetLabels: {
+    'preset:abu': 'Abu Default',
+    'preset:engineer': 'Engineer',
+    'preset:product': 'Product Manager',
+    'preset:data': 'Data Analyst',
+    'preset:writer': 'Content Editor',
+    'preset:business': 'Business Advisor',
   },
 
   permission: {
@@ -1164,7 +1174,7 @@ const enUS: TranslationDict = {
     toolUsage: 'Tool Usage',
     moreFiles: '{count} more files...',
     collapse: 'Collapse',
-    connectors: 'Connectors',
+    connectors: 'MCP',
     refreshing: 'Refreshing...',
     // Preview: PDF
     pdfPage: 'Page {current} / {total}',
@@ -1530,8 +1540,6 @@ const enUS: TranslationDict = {
   },
 
   about: {
-    feedback: 'Feedback',
-    feedbackDesc: 'Scan to add on WeChat for feedback or discussion',
     sponsor: 'Support',
     sponsorDesc: 'Buy the author a coffee if you find Abu useful',
     deviceId: 'Device ID',
