@@ -11,7 +11,7 @@
 本地运行的 AI 桌面办公助手，灵感来自 Claude Code 的 Cowork 模式。
 你说需求，阿布干活 — 读文件、跑命令、写文档、做报表，全在本地完成。
 
-[![Release](https://img.shields.io/github/v/release/PM-Shawn/Abu-Cowork?style=flat-square)](https://github.com/PM-Shawn/Abu-Cowork/releases)
+[![Release](https://img.shields.io/github/v/release/wismyzhizi2018/Abu-Cowork?style=flat-square)](https://github.com/wismyzhizi2018/Abu-Cowork/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
 
 [下载安装](#下载安装) · [快速开始](#快速开始) · [功能介绍](#功能介绍) · [使用指南](docs/User-Guide.md) · [从源码构建](#从源码构建)
@@ -43,7 +43,7 @@
 - **v0.15** — **性格系统（Soul）**：主动度三档预设（寡言 / 伙伴 / 管家）+ `SOUL.md` 自定义语气称呼；**内容安全扫描**：扫 agent / skill / 记忆里的 prompt 注入与危险指令（120+ 类）
 - **v0.13** — **自进化 Skills**、**Projects 多对话聚合**、**通知中心**、**Todo 跨重启**、**诊断面板**一键自检
 
-> 完整 changelog 见 [Releases](https://github.com/PM-Shawn/Abu-Cowork/releases)。
+> 完整 changelog 见 [Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases)。
 
 ## 产品预览
 
@@ -171,7 +171,7 @@
 
 ## 下载安装
 
-前往 [GitHub Releases](https://github.com/PM-Shawn/Abu-Cowork/releases) 下载最新版本：
+前往 [GitHub Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases) 下载最新版本：
 
 | 平台 | 文件 |
 |------|------|
@@ -265,7 +265,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/PM-Shawn/Abu-Cowork.git
+git clone https://github.com/wismyzhizi2018/Abu-Cowork.git
 cd Abu-Cowork
 
 # 安装依赖
@@ -381,7 +381,7 @@ src-tauri/
 
 ## Star 趋势
 
-[![Star History Chart](https://api.star-history.com/svg?repos=PM-Shawn/Abu-Cowork&type=Date)](https://star-history.com/#PM-Shawn/Abu-Cowork&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=wismyzhizi2018/Abu-Cowork&type=Date)](https://star-history.com/#wismyzhizi2018/Abu-Cowork&Date)
 
 ## 许可证
 

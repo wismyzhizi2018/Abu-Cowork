@@ -11,7 +11,7 @@
 A locally-run AI desktop assistant inspired by Claude Code's Cowork mode.
 Tell Abu what you need — it reads files, runs commands, writes docs, and builds reports, all on your machine.
 
-[![Release](https://img.shields.io/github/v/release/PM-Shawn/Abu-Cowork?style=flat-square)](https://github.com/PM-Shawn/Abu-Cowork/releases)
+[![Release](https://img.shields.io/github/v/release/wismyzhizi2018/Abu-Cowork?style=flat-square)](https://github.com/wismyzhizi2018/Abu-Cowork/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
 
 [Download](#download) · [Quick Start](#quick-start) · [Features](#features) · [User Guide](docs/User-Guide_EN.md) · [Build from Source](#build-from-source)
@@ -43,7 +43,7 @@ Tell Abu what you need — it reads files, runs commands, writes docs, and build
 - **v0.15** — **Soul personality system**: 3 proactivity presets (Quiet / Buddy / Butler) + custom `SOUL.md` for tone, address, and reply style; **Content safety scan**: scans agents / skills / memory for prompt injection and dangerous instructions (120+ patterns)
 - **v0.13** — **Self-Evolving Skills**, **Projects** (multi-conversation aggregation), **Notification Center**, **Persistent Todos**, **Diagnostic Panel** one-click self-check
 
-> Full changelog: [Releases](https://github.com/PM-Shawn/Abu-Cowork/releases).
+> Full changelog: [Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases).
 
 ## Preview
 
@@ -171,7 +171,7 @@ Turn Abu into your team bot — just @Abu in your chat:
 
 ## Download
 
-Head to [GitHub Releases](https://github.com/PM-Shawn/Abu-Cowork/releases) to download the latest version:
+Head to [GitHub Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases) to download the latest version:
 
 | Platform | File |
 |----------|------|
@@ -265,7 +265,7 @@ Create a weekly report PPT for this week
 
 ```bash
 # Clone the repo
-git clone https://github.com/PM-Shawn/Abu-Cowork.git
+git clone https://github.com/wismyzhizi2018/Abu-Cowork.git
 cd Abu-Cowork
 
 # Install dependencies
@@ -380,7 +380,7 @@ If Abu has been helpful to you, feel free to buy the author a coffee:
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=PM-Shawn/Abu-Cowork&type=Date)](https://star-history.com/#PM-Shawn/Abu-Cowork&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=wismyzhizi2018/Abu-Cowork&type=Date)](https://star-history.com/#wismyzhizi2018/Abu-Cowork&Date)
 
 ## License
 

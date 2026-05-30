@@ -64,6 +64,7 @@ Abu 基于 **Tauri 2.0** 构建，采用前后端分离架构：
 | `chatStore` | 对话列表、消息、当前会话 |
 | `mcpStore` | MCP 服务器连接状态、工具列表 |
 | `diagnosticStore` | 诊断检查结果 |
+| `authStore` | ERP 登录状态、Token 管理、Provider 同步 |
 
 ### `src/core/` — 核心业务逻辑
 
@@ -79,6 +80,7 @@ Abu 基于 **Tauri 2.0** 构建，采用前后端分离架构：
 | `core/logging/` | 环形缓冲日志 |
 | `core/im/` | IM 频道路由、Token 管理 |
 | `core/diagnostic/` | 诊断检查、数据脱敏 |
+| `core/auth/` | ERP 登录认证、模型中心 Provider 拉取 |
 
 ### `src/components/` — React 组件
 
@@ -88,6 +90,7 @@ Abu 基于 **Tauri 2.0** 构建，采用前后端分离架构：
 | `sidebar/` | 侧边栏导航 |
 | `settings/` | 设置面板 |
 | `tools/` | 工具箱 UI |
+| `auth/` | 登录页 UI |
 
 ### `src/utils/` — 工具函数
 
@@ -119,6 +122,37 @@ npm run tauri:dev
 cd src-tauri && cargo build
 ```
 
+### 环境变量
+
+| 变量 | 用途 | 必需 |
+|------|------|------|
+| `VITE_AUTH_BASE_URL` | ERP 登录服务地址，设置后启用登录功能 | 否 |
+| `VITE_CONSOLE_URL` | Console 遥测地址 | 否 |
+
+创建 `.env.local` 文件配置本地开发环境变量（不会提交到 git）：
+
+```bash
+# .env.local
+VITE_AUTH_BASE_URL=https://your-erp-domain.com
+```
+
+### 登录功能开发
+
+登录功能通过 `VITE_AUTH_BASE_URL` 环境变量控制开关：
+
+- **未设置** — 直接进入首页，无登录流程
+- **已设置** — 启动时弹出登录页，登录成功后自动拉取远程 Provider 配置
+
+相关文件：
+
+| 文件 | 职责 |
+|------|------|
+| `core/auth/loginApi.ts` | ERP 登录接口 + 模型中心 Provider 拉取 |
+| `stores/authStore.ts` | 认证状态管理（Token、登录状态、bootstrap 流程） |
+| `components/auth/LoginPage.tsx` | 登录页 UI |
+
+Token 存储在加密的 secretStore 中（`auth:erpToken`），支持跳过登录（永久跳过，persist 到 localStorage）。
+
 ### 网络代理（中国大陆）
 
 如果访问 GitHub / crates.io 较慢，配置 SOCKS5 代理：
@@ -136,6 +170,49 @@ proxy = "socks5h://localhost:1080"
 [net]
 git-fetch-with-cli = true
 ```
+
+---
+
+## CI/CD
+
+项目使用 GitHub Actions 自动构建和测试。
+
+### CI（持续集成）
+
+每次推送到 `main` 或 `dev` 分支，或创建 PR 时自动运行：
+
+- TypeScript 类型检查
+- ESLint 代码检查
+- Vitest 单元测试
+
+配置文件：`.github/workflows/ci.yml`
+
+### Release（发布构建）
+
+推 `v*` 格式的 tag 时自动触发：
+
+```bash
+git tag v0.23.0
+git push origin v0.23.0
+```
+
+自动在 macOS 和 Windows runner 上构建，产物上传到 GitHub Releases：
+
+| 产物 | 平台 |
+|------|------|
+| `Abu_x.x.x_aarch64.dmg` | macOS Apple Silicon |
+| `Abu_x.x.x_x64.dmg` | macOS Intel |
+| `Abu_x.x.x_x64-setup.exe` | Windows x64 |
+
+配置文件：`.github/workflows/release.yml`
+
+### GitHub Secrets
+
+| Secret | 用途 |
+|--------|------|
+| `VITE_AUTH_BASE_URL` | 构建时注入 ERP 登录域名 |
+| `VITE_CONSOLE_URL` | Console 遥测地址 |
+| `TAURI_SIGNING_PRIVATE_KEY` | Tauri 更新签名私钥 |
 
 ---
 

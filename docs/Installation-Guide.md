@@ -4,7 +4,7 @@
 
 ## 下载
 
-前往 [GitHub Releases](https://github.com/PM-Shawn/Abu-Cowork/releases) 下载对应平台的安装包：
+前往 [GitHub Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases) 下载对应平台的安装包：
 
 | 平台 | 文件格式 |
 |------|----------|

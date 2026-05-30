@@ -37,7 +37,7 @@ This guide covers all Abu features and how to use them effectively.
 
 #### Download
 
-Download the installer for your platform from [GitHub Releases](https://github.com/PM-Shawn/Abu-Cowork/releases):
+Download the installer for your platform from [GitHub Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases):
 
 | Platform | File |
 |----------|------|
@@ -67,7 +67,19 @@ Download the installer for your platform from [GitHub Releases](https://github.c
 
 > Abu is open-source software. The security warnings appear because the app hasn't been signed with a commercial certificate, not because there's anything wrong with the app. macOS requires re-running `xattr -cr` after each update; Windows usually only needs SmartScreen approval on first launch.
 
-### 2. Configure a Model
+### 2. Login (Internal Company Version)
+
+If Abu shows a login page on startup, ERP login is enabled:
+
+1. Enter your company ERP phone number and password
+2. Click **"Login"**
+3. Once logged in, model configurations are synced automatically — no need to enter API keys manually
+
+> You can also click **"Skip, use without login"** to skip login, but you'll need to configure AI services manually.
+
+### 3. Configure a Model
+
+If login is not enabled (or you skipped it), configure manually:
 
 1. Open Abu and click the **settings icon** at the bottom left
 2. Go to **"AI Services"**
@@ -75,7 +87,7 @@ Download the installer for your platform from [GitHub Releases](https://github.c
 4. Enter your API Key
 5. Choose the model to use
 
-### 3. Start Chatting
+### 4. Start Chatting
 
 Return to the main screen and describe what you need in natural language. Abu will plan and execute the task automatically.
 

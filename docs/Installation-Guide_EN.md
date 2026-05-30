@@ -4,7 +4,7 @@
 
 ## Download
 
-Head to [GitHub Releases](https://github.com/PM-Shawn/Abu-Cowork/releases) to download the installer for your platform:
+Head to [GitHub Releases](https://github.com/wismyzhizi2018/Abu-Cowork/releases) to download the installer for your platform:
 
 | Platform | File |
 |----------|------|
