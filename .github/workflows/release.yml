@@ -129,7 +129,9 @@ jobs:
           else
             # Tauri 2 signs the NSIS .exe installer directly (not a separate .nsis.zip).
             # The .exe is both the installer and the updater bundle.
-            gh release upload "$TAG" "$BUNDLE"/nsis/*-setup.exe --clobber
+            # Rename .exe to stable name (without version) for latest.json
+            cp "$BUNDLE"/nsis/*-setup.exe "$BUNDLE"/nsis/Abu_x64-setup.exe
+            gh release upload "$TAG" "$BUNDLE"/nsis/Abu_x64-setup.exe --clobber
             if ls "$BUNDLE"/nsis/*-setup.exe.sig 1>/dev/null 2>&1; then
               # Rename .sig to stable name for latest.json generation
               cp "$BUNDLE"/nsis/*-setup.exe.sig "$BUNDLE"/nsis/Abu_x64-setup.exe.sig
