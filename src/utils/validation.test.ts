@@ -18,9 +18,14 @@ describe('ITEM_NAME_RE', () => {
     expect(ITEM_NAME_RE.test('bad-')).toBe(false);
   });
 
-  it('rejects uppercase letters', () => {
-    expect(ITEM_NAME_RE.test('Bad')).toBe(false);
-    expect(ITEM_NAME_RE.test('mySkill')).toBe(false);
+  it('allows uppercase letters', () => {
+    expect(ITEM_NAME_RE.test('Bad')).toBe(true);
+    expect(ITEM_NAME_RE.test('mySkill')).toBe(true);
+  });
+
+  it('allows Unicode names (Chinese, etc.)', () => {
+    expect(ITEM_NAME_RE.test('订单助手')).toBe(true);
+    expect(ITEM_NAME_RE.test('日本語テスト')).toBe(true);
   });
 
   it('rejects empty string', () => {

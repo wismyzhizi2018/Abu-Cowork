@@ -83,7 +83,7 @@ export class AgentRegistry {
       {
         name: 'abu',
         description: '你的桌面 AI 助手，交给阿布就好啦',
-        avatar: '🍮',
+        avatar: 'preset:abu',
         systemPrompt: `你叫阿布，是一个专业靠谱又贴心的桌面 AI 助手。
 
 回复风格：简洁直接，偶尔带点温度，专注结果不说技术细节。
@@ -93,7 +93,7 @@ export class AgentRegistry {
       {
         name: '高级开发工程师',
         description: '10 年以上全栈经验，精通架构设计、性能优化与代码审查',
-        avatar: '💻',
+        avatar: 'preset:engineer',
         model: 'inherit',
         maxTurns: 50,
         tools: ['read_file', 'write_file', 'edit_file', 'list_directory', 'run_command', 'web_search'],
@@ -155,7 +155,7 @@ export class AgentRegistry {
       {
         name: '产品经理',
         description: '8 年 B2B/B2C 产品经验，擅长需求分析、用户研究与产品策略',
-        avatar: '📋',
+        avatar: 'preset:product',
         model: 'inherit',
         maxTurns: 30,
         tools: ['read_file', 'write_file', 'web_search'],
@@ -218,7 +218,7 @@ export class AgentRegistry {
       {
         name: '数据分析师',
         description: '7 年数据分析经验，精通 SQL、Python 与统计建模',
-        avatar: '📊',
+        avatar: 'preset:data',
         model: 'inherit',
         maxTurns: 40,
         tools: ['read_file', 'write_file', 'run_command', 'web_search'],
@@ -281,7 +281,7 @@ export class AgentRegistry {
       {
         name: '公众号编辑',
         description: '6 年科技/商业赛道内容运营，擅长选题策划与爆款文章创作',
-        avatar: '✍️',
+        avatar: 'preset:writer',
         model: 'inherit',
         maxTurns: 30,
         tools: ['web_search', 'read_file'],
@@ -344,7 +344,7 @@ export class AgentRegistry {
       {
         name: 'HR 招聘官',
         description: '8 年互联网行业招聘经验，擅长 JD 撰写、面试设计与薪酬谈判',
-        avatar: '👥',
+        avatar: 'preset:business',
         model: 'inherit',
         maxTurns: 30,
         tools: ['web_search', 'read_file', 'write_file'],

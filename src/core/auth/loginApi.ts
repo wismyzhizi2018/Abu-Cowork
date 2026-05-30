@@ -46,6 +46,10 @@ interface ProvidersResponse {
   };
 }
 
+function joinUrl(base: string, path: string): string {
+  return new URL(path, base.endsWith('/') ? base : base + '/').toString();
+}
+
 /**
  * ERP login via mobile + password.
  * GET {baseUrl}/rest/auth/user/login?mobile=xxx&password=xxx
@@ -55,7 +59,8 @@ export async function loginERP(
   mobile: string,
   password: string,
 ): Promise<ERPLoginResult> {
-  const url = new URL('/rest/auth/user/login', baseUrl);
+  const base = joinUrl(baseUrl, 'rest/auth/user/login');
+  const url = new URL(base);
   url.searchParams.set('mobile', mobile);
   url.searchParams.set('password', password);
 
@@ -79,6 +84,33 @@ function mapApiFormat(raw: string): ApiFormat {
 }
 
 /**
+ * Fetch current user info (name + avatar) after login.
+ * GET /order/base/get_user_info
+ * Header: Authorization: <token> (raw, no Bearer prefix)
+ */
+export async function fetchUserInfo(
+  baseUrl: string,
+  token: string,
+): Promise<{ name: string; avatar: string }> {
+  const url = joinUrl(baseUrl, 'order/base/get_user_info');
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: token },
+  });
+  if (!res.ok) {
+    throw new Error(`网络错误: HTTP ${res.status}`);
+  }
+
+  const json: { code: number; msg?: string; data?: { name: string; avatar: string } } =
+    await res.json();
+  if (json.code !== 0 || !json.data) {
+    throw new Error(json.msg || '获取用户信息失败');
+  }
+
+  return json.data;
+}
+
+/**
  * Fetch provider configurations from the model center.
  * GET {baseUrl}/api/providers
  * Header: Authorization: Bearer <token>
@@ -89,9 +121,9 @@ export async function fetchProviders(
   baseUrl: string,
   token: string,
 ): Promise<Omit<ProviderInstance, 'id' | 'status' | 'sortOrder'>[]> {
-  const url = new URL('/api/providers', baseUrl);
+  const url = joinUrl(baseUrl, 'api/providers');
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(url, {
     method: 'GET',
     headers: { Authorization: `Bearer ${token}` },
   });

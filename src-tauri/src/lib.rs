@@ -1159,10 +1159,18 @@ fn update_tray_menu(app: AppHandle, im_channels: Vec<IMTrayStatus>, trigger_coun
     if let Ok(sep) = MenuItem::with_id(&app, "sep", "────────────", false, None::<&str>) {
         items.push(sep);
     }
-    if let Ok(show) = MenuItem::with_id(&app, "show", "Show Abu / 显示窗口", true, None::<&str>) {
+    let is_chinese = sys_locale::get_locale()
+        .map(|l| l.starts_with("zh"))
+        .unwrap_or(false);
+    let (show_label, quit_label) = if is_chinese {
+        ("显示窗口", "退出")
+    } else {
+        ("Show Abu", "Quit")
+    };
+    if let Ok(show) = MenuItem::with_id(&app, "show", show_label, true, None::<&str>) {
         items.push(show);
     }
-    if let Ok(quit) = MenuItem::with_id(&app, "quit", "Quit / 退出", true, None::<&str>) {
+    if let Ok(quit) = MenuItem::with_id(&app, "quit", quit_label, true, None::<&str>) {
         items.push(quit);
     }
 
@@ -1255,9 +1263,17 @@ pub fn run() {
                 }
             }
 
-            // Build tray menu — bilingual labels for cross-locale compatibility
-            let show_item = MenuItem::with_id(app, "show", "Show Abu / 显示窗口", true, None::<&str>)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quit / 退出", true, None::<&str>)?;
+            // Build tray menu — use system locale to pick language
+            let is_chinese = sys_locale::get_locale()
+                .map(|l| l.starts_with("zh"))
+                .unwrap_or(false);
+            let (show_label, quit_label) = if is_chinese {
+                ("显示窗口", "退出")
+            } else {
+                ("Show Abu", "Quit")
+            };
+            let show_item = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
             // Create tray icon with known ID for update_tray_menu

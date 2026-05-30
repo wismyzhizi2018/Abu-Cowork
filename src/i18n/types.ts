@@ -698,11 +698,6 @@ export interface TranslationDict {
     exportIncludeRawWarning: string;
     exportIncludedListTitle: string;
     exportPrivacyText: string;
-    // Upload to console
-    uploadButton: string;
-    uploadInProgress: string;
-    uploadSuccess: string;
-    uploadFailed: string;
     // Success card
     successTitle: string;
     successMeta: string; // {size}, {count}, {scrubbed}
@@ -789,6 +784,8 @@ export interface TranslationDict {
     add: string;
     install: string;
     uninstall: string;
+    uninstallConfirmTitle: string;
+    uninstallConfirmMessage: string;
     installed: string;
     installAndConnect: string;
     popularMCPServices: string;
@@ -926,6 +923,10 @@ export interface TranslationDict {
     agentMaxTurns: string;
     agentBackground: string;
     agentAvatar: string;
+    agentAvatarUpload: string;
+    agentAvatarUploadHint: string;
+    agentAvatarUploadInvalid: string;
+    agentAvatarDefaultPresets: string;
     agentSystemPrompt: string;
     agentEdit: string;
     agentSave: string;
@@ -1058,6 +1059,8 @@ export interface TranslationDict {
     categoryBlocksUnblockError: string; // toast title on delete failure
     categoryBlocksHint: string;         // subtitle describing what these are
   };
+
+  agentAvatarPresetLabels: Record<string, string>;
 
   // Permission Dialog
   permission: {
@@ -1552,8 +1555,6 @@ export interface TranslationDict {
 
   // About
   about: {
-    feedback: string;
-    feedbackDesc: string;
     sponsor: string;
     sponsorDesc: string;
     deviceId: string;

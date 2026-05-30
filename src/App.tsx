@@ -453,8 +453,7 @@ function App() {
     <ErrorBoundary>
     <TooltipProvider delayDuration={200}>
       {showLogin && <LoginPage onLoginSuccess={() => setShowLogin(false)} />}
-
-      {/* Title bar drag region — only needed on macOS where we use overlay title bar */}
+      {!showLogin && (<>
       {mac && (
         <div
           data-tauri-drag-region
@@ -558,6 +557,7 @@ function App() {
           />
         )}
       </div>
+      </>)}
     </TooltipProvider>
     </ErrorBoundary>
   );

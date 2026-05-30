@@ -38,6 +38,7 @@ base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
 rusqlite = { version = "0.31", features = ["bundled"] }
+sys-locale = "0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

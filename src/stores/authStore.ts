@@ -8,12 +8,24 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { loginERP, fetchProviders } from '@/core/auth/loginApi';
+import { loginERP, fetchProviders, fetchUserInfo } from '@/core/auth/loginApi';
 import { useSettingsStore } from './settingsStore';
 import { getSecret, setSecret, deleteSecret } from '@/utils/secretStore';
 
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL as string | undefined;
+const ORDER_API_URL = import.meta.env.VITE_ORDER_API_URL as string | undefined;
+const PROVIDERS_URL = import.meta.env.VITE_PROVIDERS_URL as string | undefined;
 const SECRET_KEY = 'auth:erpToken';
+
+/** Disable all non-remote (local) providers after remote ones are synced */
+function disableLocalProviders(): void {
+  const settingsState = useSettingsStore.getState();
+  for (const p of settingsState.providers) {
+    if (p.source !== 'remote' && p.enabled) {
+      settingsState.updateProvider(p.id, { enabled: false });
+    }
+  }
+}
 
 export interface AuthState {
   erpUserName: string | null;
@@ -22,6 +34,8 @@ export interface AuthState {
   authEnabled: boolean;
   loginError: string | null;
   isLoading: boolean;
+  savedMobile: string;
+  savedPassword: string;
 
   login: (mobile: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -39,6 +53,8 @@ export const useAuthStore = create<AuthState>()(
       authEnabled: !!AUTH_BASE_URL,
       loginError: null,
       isLoading: false,
+      savedMobile: '',
+      savedPassword: '',
 
       login: async (mobile, password) => {
         if (!AUTH_BASE_URL) return;
@@ -51,31 +67,49 @@ export const useAuthStore = create<AuthState>()(
           // Step 2: Store token in secretStore
           await setSecret(SECRET_KEY, token);
 
-          // Step 3: Fetch providers from model center
-          const providers = await fetchProviders(AUTH_BASE_URL, token);
-
-          // Step 4: Merge providers into settingsStore
-          const settingsState = useSettingsStore.getState();
-          for (const config of providers) {
-            const existing = settingsState.providers.find(
-              (p) => p.source === 'remote' && p.name === config.name,
-            );
-            if (existing) {
-              settingsState.updateProvider(existing.id, config);
-            } else {
-              settingsState.addProvider(config);
+          // Step 3: Fetch user info (name + avatar) and write to settings
+          if (ORDER_API_URL) {
+            try {
+              const userInfo = await fetchUserInfo(ORDER_API_URL, token);
+              const settingsState = useSettingsStore.getState();
+              settingsState.setUserNickname(userInfo.name);
+              settingsState.setUserAvatar(userInfo.avatar);
+            } catch (err) {
+              console.warn('[Auth] Failed to fetch user info:', err);
             }
           }
 
-          // Step 5: Set default model if specified
-          const firstProvider = providers[0];
-          if (firstProvider?.defaultModelId) {
-            const added = settingsState.providers.find(
-              (p) => p.source === 'remote' && p.name === firstProvider.name,
-            );
-            if (added) {
-              settingsState.selectModel(added.id, firstProvider.defaultModelId);
-            }
+          // Step 4: Fetch providers from model center (non-blocking)
+          if (PROVIDERS_URL) {
+            try {
+              const providers = await fetchProviders(PROVIDERS_URL, token);
+              const settingsState = useSettingsStore.getState();
+              for (const config of providers) {
+                const existing = settingsState.providers.find(
+                  (p) => p.source === 'remote' && p.name === config.name,
+                );
+                if (existing) {
+                  settingsState.updateProvider(existing.id, config);
+                } else {
+                  settingsState.addProvider(config);
+                }
+              }
+              const firstProvider = providers[0];
+              if (firstProvider?.defaultModelId) {
+                const added = settingsState.providers.find(
+                  (p) => p.source === 'remote' && p.name === firstProvider.name,
+                );
+                if (added) {
+                  settingsState.selectModel(added.id, firstProvider.defaultModelId);
+                }
+              }
+              // Only disable local providers when remote actually returned some
+              if (providers.length > 0) {
+                disableLocalProviders();
+              }
+            } catch (err) {
+            console.warn('[Auth] Failed to fetch providers (skipping):', err);
+          }
           }
 
           set({
@@ -83,6 +117,8 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: true,
             isLoading: false,
             skipLogin: false,
+            savedMobile: mobile,
+            savedPassword: password,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : '登录失败';
@@ -92,11 +128,18 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         await deleteSecret(SECRET_KEY).catch(() => {});
+        const settingsState = useSettingsStore.getState();
+        settingsState.setUserNickname('');
+        settingsState.setUserAvatar('');
         set({ erpUserName: null, isLoggedIn: false });
       },
 
       skipLoginForever: () => {
-        set({ skipLogin: true });
+        const settingsState = useSettingsStore.getState();
+        settingsState.setUserNickname('');
+        settingsState.setUserAvatar('');
+        settingsState.setGuideShown(false);
+        set({ skipLogin: true, erpUserName: null });
       },
 
       bootstrapAuth: async () => {
@@ -113,37 +156,54 @@ export const useAuthStore = create<AuthState>()(
 
         if (!token) return { needLogin: true };
 
-        // Try to fetch providers with cached token
-        try {
-          const providers = await fetchProviders(AUTH_BASE_URL, token);
-          const settingsState = useSettingsStore.getState();
-          for (const config of providers) {
-            const existing = settingsState.providers.find(
-              (p) => p.source === 'remote' && p.name === config.name,
-            );
-            if (existing) {
-              settingsState.updateProvider(existing.id, config);
-            } else {
-              settingsState.addProvider(config);
-            }
+        // Validate token by fetching user info
+        if (ORDER_API_URL) {
+          try {
+            const userInfo = await fetchUserInfo(ORDER_API_URL, token);
+            const settingsState = useSettingsStore.getState();
+            settingsState.setUserNickname(userInfo.name);
+            settingsState.setUserAvatar(userInfo.avatar);
+          } catch {
+            // Token expired or network error — clear and require login
+            await deleteSecret(SECRET_KEY).catch(() => {});
+            return { needLogin: true };
           }
-          const firstProvider = providers[0];
-          if (firstProvider?.defaultModelId) {
-            const added = settingsState.providers.find(
-              (p) => p.source === 'remote' && p.name === firstProvider.name,
-            );
-            if (added) {
-              settingsState.selectModel(added.id, firstProvider.defaultModelId);
-            }
-          }
-
-          set({ isLoggedIn: true });
-          return { needLogin: false };
-        } catch {
-          // Token expired or network error — clear and require login
-          await deleteSecret(SECRET_KEY).catch(() => {});
-          return { needLogin: true };
         }
+
+        // Sync providers from model center (non-blocking, skip on failure)
+        if (PROVIDERS_URL) {
+          try {
+            const providers = await fetchProviders(PROVIDERS_URL, token);
+            const settingsState = useSettingsStore.getState();
+            for (const config of providers) {
+              const existing = settingsState.providers.find(
+                (p) => p.source === 'remote' && p.name === config.name,
+              );
+              if (existing) {
+                settingsState.updateProvider(existing.id, config);
+              } else {
+                settingsState.addProvider(config);
+              }
+            }
+            const firstProvider = providers[0];
+            if (firstProvider?.defaultModelId) {
+              const added = settingsState.providers.find(
+                (p) => p.source === 'remote' && p.name === firstProvider.name,
+              );
+              if (added) {
+                settingsState.selectModel(added.id, firstProvider.defaultModelId);
+              }
+            }
+            if (providers.length > 0) {
+              disableLocalProviders();
+            }
+          } catch (err) {
+            console.warn('[Auth] Failed to sync providers (skipping):', err);
+          }
+        }
+
+        set({ isLoggedIn: true });
+        return { needLogin: false };
       },
 
       clearError: () => set({ loginError: null }),
@@ -151,9 +211,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'abu-auth',
       partialize: (state) => ({
-        skipLogin: state.skipLogin,
         erpUserName: state.erpUserName,
-        isLoggedIn: state.isLoggedIn,
+        savedMobile: state.savedMobile,
+        savedPassword: state.savedPassword,
       }),
     },
   ),

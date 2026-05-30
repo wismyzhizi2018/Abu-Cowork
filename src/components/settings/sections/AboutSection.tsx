@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 type CheckResult = 'idle' | 'just-checked' | 'error';
 
-const DISCLAIMER_URL = 'https://github.com/PM-Shawn/Abu-Cowork/blob/main/DISCLAIMER.md';
+const DISCLAIMER_URL = 'https://github.com/wismyzhizi2018/Abu-Cowork/blob/main/DISCLAIMER.md';
 
 export default function AboutSection() {
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
@@ -240,7 +240,7 @@ export default function AboutSection() {
         <p className="text-sm text-[var(--abu-text-tertiary)]">
           Made with ❤️ by{' '}
           <button
-            onClick={() => handleOpenLink('https://github.com/PM-Shawn/Abu-Cowork')}
+            onClick={() => handleOpenLink('https://github.com/wismyzhizi2018/Abu-Cowork')}
             className="text-[var(--abu-clay)] hover:underline font-medium"
           >
             Shawn
