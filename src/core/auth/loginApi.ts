@@ -1,7 +1,7 @@
 /**
  * Login API — ERP authentication and model center provider fetching
  *
- * Both endpoints are on AUTH_BASE_URL (same domain).
+ * AUTH_BASE_URL, ORDER_API_URL, and PROVIDERS_URL are independent services.
  * Enabled only when VITE_AUTH_BASE_URL is set at build time.
  */
 

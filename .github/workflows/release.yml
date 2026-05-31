@@ -57,8 +57,8 @@ jobs:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           VITE_CONSOLE_URL: ${{ secrets.VITE_CONSOLE_URL }}
           VITE_AUTH_BASE_URL: ${{ secrets.VITE_AUTH_BASE_URL }}
-          VITE_ORDER_API_URL: ${{ secrets.VITE_AUTH_BASE_URL }}
-          VITE_PROVIDERS_URL: ${{ secrets.VITE_AUTH_BASE_URL }}
+          VITE_ORDER_API_URL: ${{ secrets.VITE_ORDER_API_URL }}
+          VITE_PROVIDERS_URL: ${{ secrets.VITE_PROVIDERS_URL }}
         shell: bash
         run: |
           # Write signing key to file. GitHub Secrets injection or shell expansion
@@ -78,6 +78,21 @@ jobs:
           echo "Last 16 bytes (hex):"
           tail -c 16 "$RUNNER_TEMP/tauri-signing-key.txt" | od -c | head -2
           export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/tauri-signing-key.txt"
+
+          # Update version in tauri.conf.json to match the git tag
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          python3 -c "
+          import json
+          with open('src-tauri/tauri.conf.json', 'r') as f:
+              cfg = json.load(f)
+          cfg['version'] = '$VERSION'
+          with open('src-tauri/tauri.conf.json', 'w') as f:
+              json.dump(cfg, f, indent=2)
+              f.write('\n')
+          print(f'Updated tauri.conf.json version to $VERSION')
+          "
+
           npx tauri build --target ${{ matrix.target }}
           rm -f "$RUNNER_TEMP/tauri-signing-key.txt"
 
@@ -163,6 +178,7 @@ jobs:
           export SIG_WINDOWS=$(cat /tmp/sigs/Abu_x64-setup.exe.sig 2>/dev/null || echo "")
 
           export BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+          export RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
 
           # Generate latest.json
           python3 <<'PYEOF'
@@ -170,6 +186,7 @@ jobs:
 
           tag = os.environ['TAG']
           base = os.environ['BASE_URL']
+          release_url = os.environ['RELEASE_URL']
 
           sig_aarch64 = os.environ.get('SIG_AARCH64', '').strip()
           sig_x64 = os.environ.get('SIG_X64', '').strip()
@@ -201,7 +218,7 @@ jobs:
 
           latest = {
               'version': tag.lstrip('v'),
-              'notes': f'See {base} for details.',
+              'notes': f'See {release_url} for details.',
               'pub_date': pub_date,
               'platforms': platforms,
           }
