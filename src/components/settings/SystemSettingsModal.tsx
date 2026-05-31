@@ -1,12 +1,13 @@
 import { useSettingsStore, type SystemSettingsTab } from '@/stores/settingsStore';
 import { useI18n } from '@/i18n';
-import { Settings2, Info, Shield, SlidersHorizontal, Radio, Brain, Heart, Activity, BarChart3 } from 'lucide-react';
+import { Settings2, Info, Shield, SlidersHorizontal, Radio, Brain, Heart, Activity, BarChart3, PawPrint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AIServicesSection, AboutSection, SandboxSection, GeneralSection, IMChannelSection } from './sections';
 import PersonalMemorySection from './sections/PersonalMemorySection';
 import SoulSection from './sections/SoulSection';
 import DiagnosticSection from './sections/DiagnosticSection';
 import UsageSection from './sections/UsageSection';
+import PetSection from './sections/PetSection';
 
 export default function SystemSettingsView() {
   const {
@@ -22,6 +23,7 @@ export default function SystemSettingsView() {
     { id: 'personal-memory', label: t.sidebar.personalMemory, icon: Brain },
     { id: 'soul', label: t.soul.title, icon: Heart },
     { id: 'sandbox', label: t.settings.sandbox, icon: Shield },
+    { id: 'pet', label: '桌宠', icon: PawPrint },
     { id: 'general', label: t.settings.general, icon: SlidersHorizontal },
     { id: 'diagnostic', label: t.diagnostic.title, icon: Activity },
     { id: 'about', label: t.common.version, icon: Info },
@@ -47,6 +49,8 @@ export default function SystemSettingsView() {
         return <DiagnosticSection />;
       case 'about':
         return <AboutSection />;
+      case 'pet':
+        return <PetSection />;
       default:
         return <GeneralSection />;
     }

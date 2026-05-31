@@ -9,7 +9,10 @@
 //! MVP (Phase A): show / hide / toggle. Later phases add: resize (mini
 //! input), drag persistence, status light.
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Manager, WebviewUrl, WebviewWindowBuilder,
+    menu::{Menu, MenuItem},
+};
 
 const PET_LABEL: &str = "pet";
 const PET_SIZE: f64 = 80.0;
@@ -49,6 +52,7 @@ pub fn pet_show(app: AppHandle) -> Result<(), String> {
     .transparent(true)
     .always_on_top(true)
     .skip_taskbar(true)
+    .focused(false)
     .resizable(false)
     .shadow(false)
     .build()
@@ -107,4 +111,69 @@ pub fn pet_toggle(app: AppHandle) -> Result<bool, String> {
     }
     pet_show(app)?;
     Ok(true)
+}
+
+/// Resize the pet window. Size is in logical pixels.
+#[tauri::command]
+pub fn pet_set_size(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    let window = app
+        .get_webview_window(PET_LABEL)
+        .ok_or_else(|| "Pet window not found".to_string())?;
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width,
+            height,
+        }))
+        .map_err(|e| format!("Failed to set pet size: {}", e))?;
+    Ok(())
+}
+
+/// Move the pet window to a new position. Coordinates are physical pixels.
+#[tauri::command]
+pub fn pet_set_position(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    let window = app
+        .get_webview_window(PET_LABEL)
+        .ok_or_else(|| "Pet window not found".to_string())?;
+    window
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+            x: x as i32,
+            y: y as i32,
+        }))
+        .map_err(|e| format!("Failed to set pet position: {}", e))?;
+    Ok(())
+}
+
+/// Show the pet context menu at the given screen position.
+/// PRD §3.4: DND, Mini mode, Settings, Dashboard, Focus terminal
+#[tauri::command]
+pub fn pet_show_context_menu(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    let pet_window = app
+        .get_webview_window(PET_LABEL)
+        .ok_or_else(|| "Pet window not found".to_string())?;
+
+    // Build menu items
+    let dnd_toggle = MenuItem::with_id(&app, "dnd", "勿扰模式", true, None::<&str>)
+        .map_err(|e| format!("Failed to create menu item: {}", e))?;
+    let mini_mode = MenuItem::with_id(&app, "mini", "Mini 模式", true, None::<&str>)
+        .map_err(|e| format!("Failed to create menu item: {}", e))?;
+    let settings = MenuItem::with_id(&app, "settings", "设置", true, None::<&str>)
+        .map_err(|e| format!("Failed to create menu item: {}", e))?;
+    let dashboard = MenuItem::with_id(&app, "dashboard", "显示 Dashboard", true, None::<&str>)
+        .map_err(|e| format!("Failed to create menu item: {}", e))?;
+    let focus_terminal = MenuItem::with_id(&app, "focus", "聚焦终端", true, None::<&str>)
+        .map_err(|e| format!("Failed to create menu item: {}", e))?;
+
+    let menu = Menu::with_items(&app, &[&dnd_toggle, &mini_mode, &settings, &dashboard, &focus_terminal])
+        .map_err(|e| format!("Failed to create menu: {}", e))?;
+
+    // Show menu at position
+    use tauri::Position;
+    pet_window
+        .popup_menu_at(&menu, Position::Physical(tauri::PhysicalPosition {
+            x: x as i32,
+            y: y as i32,
+        }))
+        .map_err(|e| format!("Failed to show menu: {}", e))?;
+
+    Ok(())
 }

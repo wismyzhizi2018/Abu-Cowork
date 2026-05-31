@@ -18,6 +18,7 @@ mod computer_use;
 mod accessibility;
 mod overlay;
 mod pet;
+mod codex_pet_splitter;
 mod secrets;
 mod atomic_write;
 mod notice;
@@ -1357,6 +1358,16 @@ pub fn run() {
             pet::pet_show,
             pet::pet_hide,
             pet::pet_toggle,
+            pet::pet_set_size,
+            pet::pet_set_position,
+            pet::pet_show_context_menu,
+            codex_pet_splitter::codex_pet_split_atlas,
+            codex_pet_splitter::codex_pet_install_theme,
+            codex_pet_splitter::codex_pet_extract_zip,
+            codex_pet_splitter::read_file_content,
+            codex_pet_splitter::codex_pet_validate_spritesheet,
+            codex_pet_splitter::get_app_themes_dir,
+            codex_pet_splitter::codex_pet_cleanup_temp,
             trigger_server::start_trigger_server,
             trigger_server::get_trigger_server_port,
             get_local_ip,

@@ -70,3 +70,5 @@ prototype-*.html
 website/one-screen.html
 # Root-level AX / Computer Use diagnostic scratch docs (e.g. AX_TEST.md, AX_DIAG.md)
 AX_*.md
+coverage/
+src-tauri/gen/

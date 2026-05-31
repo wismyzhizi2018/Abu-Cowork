@@ -1,50 +1,53 @@
 /**
- * Pet status bridge — main-window side (Phase B).
+ * Pet status bridge — main-window side
  *
- * Aggregates agent status across all conversations and emits
- * 'pet-status-update' events to the pet window. The pet window lives in
- * a separate WebView, so direct store access isn't available; Tauri
- * events are the bridge.
+ * Aggregates agent status across all conversations using the state machine,
+ * and emits 'pet-status-update' events to the pet window.
  *
- * Priority rule (PRD-02): waiting > error > running > done > idle.
- * Waiting is sourced from Notice System events (permission_request /
- * user_input_needed) — wired in Phase D. For v1-B we only see
- * ConversationStatus, which has no waiting value.
+ * PRD §8: Agent events → state mapping + multi-session aggregation + debounce.
  *
- * Debounce: 3 seconds minimum between emits to prevent flicker when
- * multiple conversations transition together.
+ * Event mapping:
+ *   agent_start / agent_thinking     → thinking
+ *   agent_tool_start / agent_tool_end → working
+ *   agent_complete                    → attention (one-shot)
+ *   agent_error                       → error
+ *   subagent_start                    → building (1个)
+ *   subagent_multi                    → building (2+个)
+ *   permission_request                → notification
+ *   file_write_start                  → carrying
+ *   file_sweep                        → sweeping
+ *   session_idle                      → idle
  */
 
 import { emitTo } from '@tauri-apps/api/event';
 import { useChatStore } from '@/stores/chatStore';
 import type { ConversationStatus } from '@/types';
-
-export type PetStatus = 'idle' | 'running' | 'waiting' | 'error' | 'done';
-
-const PRIORITY: Record<PetStatus, number> = {
-  waiting: 5,
-  error: 4,
-  running: 3,
-  done: 2,
-  idle: 1,
-};
+import {
+  type AgentEvent,
+  mapAgentEvent,
+  resolveDisplayState,
+  type PetDisplayState,
+} from '@/core/pet/stateMachine';
 
 const MIN_INTERVAL_MS = 3_000;
 const PET_WINDOW_LABEL = 'pet';
 const EVENT_NAME = 'pet-status-update';
 
-let lastEmittedStatus: PetStatus | null = null;
+let lastEmittedState: PetDisplayState | null = null;
 let lastEmittedAt = 0;
-let pendingTimer: number | null = null;
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
 let storeUnsub: (() => void) | null = null;
 
-function mapConversationStatus(s: ConversationStatus): PetStatus {
+// Event buffer for agent events (separate from store-driven status)
+const agentEventBuffer: { event: AgentEvent; sessionId: string; timestamp: number }[] = [];
+
+function mapConversationStatus(s: ConversationStatus): PetDisplayState {
   switch (s) {
     case 'running':
-      return 'running';
+      return 'working';
     case 'completed':
-      return 'done';
+      return 'attention';
     case 'error':
       return 'error';
     case 'idle':
@@ -53,31 +56,29 @@ function mapConversationStatus(s: ConversationStatus): PetStatus {
   }
 }
 
-function aggregate(statuses: ConversationStatus[]): PetStatus {
-  if (statuses.length === 0) return 'idle';
-  let best: PetStatus = 'idle';
-  let bestPri = PRIORITY.idle;
-  for (const s of statuses) {
-    const mapped = mapConversationStatus(s);
-    const pri = PRIORITY[mapped];
-    if (pri > bestPri) {
-      best = mapped;
-      bestPri = pri;
-    }
-  }
-  return best;
+function aggregateFromStore(): PetDisplayState {
+  const convs = useChatStore.getState().conversations;
+  const statuses = Object.values(convs).map((c) => mapConversationStatus(c.status));
+
+  // Also consider recent agent events
+  const now = Date.now();
+  const recentEvents = agentEventBuffer.filter((e) => now - e.timestamp < 10_000);
+  const eventStates = recentEvents.map((e) => mapAgentEvent(e.event));
+
+  return resolveDisplayState([...statuses, ...eventStates], false);
 }
 
-function emitNow(status: PetStatus): void {
-  emitTo(PET_WINDOW_LABEL, EVENT_NAME, { status }).catch(() => {
-    // Pet window not open — silently drop, we'll resync on next store change.
+function emitNow(state: PetDisplayState): void {
+  emitTo(PET_WINDOW_LABEL, EVENT_NAME, { state }).catch(() => {
+    // Pet window not open — silently drop
   });
-  lastEmittedStatus = status;
+  lastEmittedState = state;
   lastEmittedAt = Date.now();
 }
 
-function scheduleEmit(status: PetStatus): void {
-  if (status === lastEmittedStatus) return;
+function scheduleEmit(): void {
+  const state = aggregateFromStore();
+  if (state === lastEmittedState) return;
 
   const now = Date.now();
   const elapsed = now - lastEmittedAt;
@@ -87,43 +88,47 @@ function scheduleEmit(status: PetStatus): void {
       clearTimeout(pendingTimer);
       pendingTimer = null;
     }
-    emitNow(status);
+    emitNow(state);
     return;
   }
 
-  // Coalesce rapid transitions — last value wins.
   const wait = MIN_INTERVAL_MS - elapsed;
   if (pendingTimer !== null) clearTimeout(pendingTimer);
-  pendingTimer = window.setTimeout(() => {
+  pendingTimer = setTimeout(() => {
     pendingTimer = null;
-    // Re-read aggregated status at emit time (not capture time) so
-    // brief intermediate states don't get frozen in.
     const latest = aggregateFromStore();
     emitNow(latest);
   }, wait);
 }
 
-function aggregateFromStore(): PetStatus {
-  const convs = useChatStore.getState().conversations;
-  const statuses = Object.values(convs).map((c) => c.status);
-  return aggregate(statuses);
+/**
+ * Record an agent event. This is called from the main window when agent
+ * lifecycle events occur.
+ */
+export function recordAgentEvent(event: AgentEvent, sessionId: string): void {
+  agentEventBuffer.push({ event, sessionId, timestamp: Date.now() });
+
+  // Keep buffer size manageable
+  if (agentEventBuffer.length > 100) {
+    agentEventBuffer.splice(0, agentEventBuffer.length - 50);
+  }
+
+  scheduleEmit();
 }
 
 /**
  * Start subscribing to chatStore changes and emitting pet-status-update.
- * Idempotent — safe to call multiple times. Emits the current status
- * once immediately so a freshly-opened pet window can sync.
+ * Idempotent — safe to call multiple times.
  */
 export function startPetStatusBridge(): void {
   if (started) return;
   started = true;
 
-  // Initial emit (after pet window may or may not exist — best effort).
+  // Initial emit
   emitNow(aggregateFromStore());
 
   storeUnsub = useChatStore.subscribe(() => {
-    const status = aggregateFromStore();
-    scheduleEmit(status);
+    scheduleEmit();
   });
 }
 
@@ -139,9 +144,7 @@ export function stopPetStatusBridge(): void {
 }
 
 /**
- * Force-emit the current status, bypassing debounce. Used by the pet
- * window after mount so it gets the latest state without waiting for a
- * store change.
+ * Force-emit the current state, bypassing debounce.
  */
 export function resyncPetStatus(): void {
   if (!started) return;
