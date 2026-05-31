@@ -16,13 +16,14 @@ let _pendingUpdate: Update | null = null;
 
 // When OSS latest.json body is just "See {github-url}", fetch the real body from GitHub API.
 async function enrichReleaseNotes(rawNotes: string): Promise<{ notes: string; url: string }> {
-  const urlMatch = rawNotes.match(/https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/releases\/tag\/([^\s)]+)/);
+  const urlMatch = rawNotes.match(/https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/releases\/(?:tag|download)\/([^\s)]+)/);
   if (!urlMatch) return { notes: rawNotes, url: '' };
 
-  const [releaseUrl, owner, repo, tag] = urlMatch;
+  const [fullMatch, owner, repo, tag] = urlMatch;
+  const releaseUrl = `https://github.com/${owner}/${repo}/releases/tag/${tag}`;
 
   // If there's meaningful content beyond the URL, keep it.
-  const stripped = rawNotes.replace(releaseUrl, '').replace(/^See\s*/i, '').trim();
+  const stripped = rawNotes.replace(fullMatch, '').replace(/^See\s*/i, '').replace(/for details\.?/i, '').trim();
   if (stripped.length > 20) return { notes: rawNotes, url: releaseUrl };
 
   try {
