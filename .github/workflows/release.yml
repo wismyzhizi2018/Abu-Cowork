@@ -79,10 +79,11 @@ jobs:
           tail -c 16 "$RUNNER_TEMP/tauri-signing-key.txt" | od -c | head -2
           export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/tauri-signing-key.txt"
 
-          # Update version in tauri.conf.json to match the git tag
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          python3 -c "
+          # Update version in tauri.conf.json to match the git tag (skip on workflow_dispatch)
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            python3 -c "
           import json
           with open('src-tauri/tauri.conf.json', 'r') as f:
               cfg = json.load(f)
@@ -92,6 +93,9 @@ jobs:
               f.write('\n')
           print(f'Updated tauri.conf.json version to $VERSION')
           "
+          else
+            echo "Skipping version update (not a tag push, ref_type=${{ github.ref_type }})"
+          fi
 
           npx tauri build --target ${{ matrix.target }}
           rm -f "$RUNNER_TEMP/tauri-signing-key.txt"
